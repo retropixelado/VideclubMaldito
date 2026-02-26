@@ -3,34 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Recommendations</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        #filter-buttons { margin-bottom: 20px; }
-    </style>
+    <title>Videclub Cinta Maldita</title>
 </head>
 <body>
-    <h1>Cynical AI Chat for Movie Recommendations</h1>
-    <div id="filter-buttons">
-        <button onclick="filterMovies('all')">Todas</button>
-        <button onclick="filterMovies('unwatched')">No vistas</button>
+    <h1>Welcome to Videclub Cinta Maldita</h1>
+    <div id="movies">
+        <h2>Recommended Movies</h2>
+        <ul id="movie-list">
+            <!-- Movies will be populated here -->
+        </ul>
+        <button id="show-all">Todas</button>
+        <button id="show-unwatched">No vistas</button>
     </div>
-    <div id="movie-list">
-        <!-- Movies will be automatically added here -->
+    <div id="chat">
+        <h2>Cynical AI Chat</h2>
+        <input type="text" id="user-input" placeholder="Ask for a movie recommendation...">
+        <button id="send">Send</button>
+        <div id="responses">
+            <!-- Responses will show up here -->
+        </div>
     </div>
     <script>
-        const movies = [ /* Array of movie objects */ ];
-        function filterMovies(filter) {
+        // Placeholder for movie database
+        let movies = [];
+        
+        // Function to display movies
+        function displayMovies(filter) {
             const movieList = document.getElementById('movie-list');
             movieList.innerHTML = '';
-            const filteredMovies = filter === 'unwatched' ? movies.filter(movie => !movie.watched) : movies;
+            const filteredMovies = filter === 'all' ? movies : movies.filter(movie => !movie.watched);
             filteredMovies.forEach(movie => {
-                const movieItem = document.createElement('div');
-                movieItem.innerText = movie.title;
-                movieList.appendChild(movieItem);
+                const li = document.createElement('li');
+                li.textContent = movie.title;
+                movieList.appendChild(li);
             });
         }
-        // Automatic add feature implementation goes here
+        
+        document.getElementById('show-all').onclick = () => displayMovies('all');
+        document.getElementById('show-unwatched').onclick = () => displayMovies('unwatched');
+        
+        // Example of cynical chat AI
+        document.getElementById('send').onclick = () => {
+            const userInput = document.getElementById('user-input').value;
+            const response = getAIMovieRecommendation(userInput);
+            const responsesDiv = document.getElementById('responses');
+            responsesDiv.innerHTML += `<p>${response}</p>`;
+        };
+        
+        function getAIMovieRecommendation(input) {
+            // Placeholder AI recommendation logic
+            const recommendedMovie = "Cynical AI recommends 'The Matrix'.";
+            movies.push({ title: recommendedMovie, watched: false }); // Automatically adds movie to the list
+            displayMovies('all'); // Update movie display
+            return recommendedMovie;
+        }
     </script>
 </body>
 </html>
