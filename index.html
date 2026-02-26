@@ -97,6 +97,24 @@ button:hover{
     color:#ff0055;
     font-size:18px;
 }
+
+.search-box{
+    margin:10px 0;
+    padding:8px;
+    background:black;
+    color:#00ff9f;
+    border:1px solid #00ff9f;
+    width:300px;
+    font-family:'Courier New', monospace;
+}
+
+.info-message{
+    padding:10px;
+    margin:10px 0;
+    border-left:3px solid #00ff9f;
+    color:#00ff9f;
+    font-size:12px;
+}
 </style>
 </head>
 <body>
@@ -105,14 +123,18 @@ button:hover{
 
 <div class="container">
 
-<button onclick="aiRecommend()">🧠 IA Recomienda</button>
-<button onclick="doubleSession()">💀 Doble Sesión</button>
-<button onclick="insomniaMode()">🌙 Insomne</button>
+<button onclick="movieDB.aiRecommend()">🧠 IA Recomienda</button>
+<button onclick="movieDB.doubleSession()">💀 Doble Sesión</button>
+<button onclick="movieDB.insomniaMode()">🌙 Insomne</button>
+<button onclick="movieDB.exportData()">💾 Exportar datos</button>
+<button onclick="movieDB.importData()">📥 Importar datos</button>
+
+<input type="text" id="searchBox" class="search-box" placeholder="Buscar película..." onkeyup="movieDB.searchMovies(this.value)">
 
 <div id="destinyResult"></div>
 
-<select id="filterCat" onchange="renderMovies()">
-<option value="all">Todas</option>
+<select id="filterCat" onchange="movieDB.renderMovies()">
+<option value="all">Todas las categorías</option>
 <option value="neo">Neo-Noir</option>
 <option value="cyber">Cyberpunk</option>
 <option value="arthouse">Arthouse</option>
@@ -120,7 +142,7 @@ button:hover{
 <option value="violence">Violencia</option>
 </select>
 
-<select id="filterDirector" onchange="renderMovies()">
+<select id="filterDirector" onchange="movieDB.renderMovies()">
 <option value="all">Todos los directores</option>
 </select>
 
@@ -136,255 +158,421 @@ button:hover{
 </div>
 
 <div class="panel">
+<h3>📊 Top 3 directores</h3>
+<pre id="topDirectors"></pre>
+</div>
+
+<div class="panel">
 <h3>🧠 Perfil Psicológico</h3>
 <div id="profile"></div>
 </div>
+
+<div id="infoMessage" class="info-message" style="display:none;"></div>
 
 </div>
 
 <script>
 
-let insomnia=false;
+class MovieDB {
+    constructor() {
+        this.insomnia = false;
+        this.movies = [
+            // TUS OBSESIONES
+            {title:"Oldboy",cat:"violence",director:"Park Chan-wook"},
+            {title:"Drive",cat:"neo",director:"Nicolas Winding Refn"},
+            {title:"Under the Silver Lake",cat:"neo",director:"David Robert Mitchell"},
+            {title:"The Green Knight",cat:"arthouse",director:"David Lowery"},
+            {title:"Akira",cat:"cyber",director:"Katsuhiro Otomo"},
+            {title:"Ghost in the Shell",cat:"cyber",director:"Mamoru Oshii"},
+            {title:"Blade Runner",cat:"cyber",director:"Ridley Scott"},
+            {title:"A Clockwork Orange",cat:"arthouse",director:"Stanley Kubrick"},
+            {title:"Princess Mononoke",cat:"arthouse",director:"Hayao Miyazaki"},
+            {title:"28 Days Later",cat:"apocalypse",director:"Danny Boyle"},
+            {title:"Train to Busan",cat:"apocalypse",director:"Yeon Sang-ho"},
 
-const movies=[
-
-// TUS OBSESIONES
-{title:"Oldboy",cat:"violence",director:"Park Chan-wook"},
-{title:"Drive",cat:"neo",director:"Nicolas Winding Refn"},
-{title:"Under the Silver Lake",cat:"neo",director:"David Robert Mitchell"},
-{title:"The Green Knight",cat:"arthouse",director:"David Lowery"},
-{title:"Akira",cat:"cyber",director:"Katsuhiro Otomo"},
-{title:"Ghost in the Shell",cat:"cyber",director:"Mamoru Oshii"},
-{title:"Blade Runner",cat:"cyber",director:"Ridley Scott"},
-{title:"A Clockwork Orange",cat:"arthouse",director:"Stanley Kubrick"},
-{title:"Princess Mononoke",cat:"arthouse",director:"Hayao Miyazaki"},
-{title:"28 Days Later",cat:"apocalypse",director:"Danny Boyle"},
-{title:"Train to Busan",cat:"apocalypse",director:"Yeon Sang-ho"},
-
-// +100 CURADAS
-{title:"Mulholland Drive",cat:"neo",director:"David Lynch"},
-{title:"Lost Highway",cat:"neo",director:"David Lynch"},
-{title:"Eraserhead",cat:"arthouse",director:"David Lynch"},
-{title:"Blue Velvet",cat:"neo",director:"David Lynch"},
-{title:"Enemy",cat:"neo",director:"Denis Villeneuve"},
-{title:"Prisoners",cat:"neo",director:"Denis Villeneuve"},
-{title:"Nightcrawler",cat:"neo",director:"Dan Gilroy"},
-{title:"Se7en",cat:"neo",director:"David Fincher"},
-{title:"Zodiac",cat:"neo",director:"David Fincher"},
-{title:"The Game",cat:"neo",director:"David Fincher"},
-{title:"Fight Club",cat:"neo",director:"David Fincher"},
-{title:"The Lighthouse",cat:"arthouse",director:"Robert Eggers"},
-{title:"The Witch",cat:"arthouse",director:"Robert Eggers"},
-{title:"The Northman",cat:"arthouse",director:"Robert Eggers"},
-{title:"Mandy",cat:"arthouse",director:"Panos Cosmatos"},
-{title:"Climax",cat:"arthouse",director:"Gaspar Noé"},
-{title:"Enter the Void",cat:"arthouse",director:"Gaspar Noé"},
-{title:"The Neon Demon",cat:"arthouse",director:"Nicolas Winding Refn"},
-{title:"Only God Forgives",cat:"violence",director:"Nicolas Winding Refn"},
-{title:"Children of Men",cat:"apocalypse",director:"Alfonso Cuarón"},
-{title:"Annihilation",cat:"apocalypse",director:"Alex Garland"},
-{title:"The Road",cat:"apocalypse",director:"John Hillcoat"},
-{title:"Melancholia",cat:"arthouse",director:"Lars von Trier"},
-{title:"The House That Jack Built",cat:"violence",director:"Lars von Trier"},
-{title:"Possessor",cat:"cyber",director:"Brandon Cronenberg"},
-{title:"Infinity Pool",cat:"arthouse",director:"Brandon Cronenberg"},
-{title:"Upgrade",cat:"cyber",director:"Leigh Whannell"},
-{title:"Dark City",cat:"cyber",director:"Alex Proyas"},
-{title:"The Matrix",cat:"cyber",director:"Wachowski Sisters"},
-{title:"Brazil",cat:"cyber",director:"Terry Gilliam"},
-{title:"Snowpiercer",cat:"apocalypse",director:"Bong Joon-ho"},
-{title:"Mad Max: Fury Road",cat:"apocalypse",director:"George Miller"},
-{title:"I Saw the Devil",cat:"violence",director:"Kim Jee-woon"},
-{title:"The Handmaiden",cat:"arthouse",director:"Park Chan-wook"},
-{title:"Audition",cat:"violence",director:"Takashi Miike"},
-{title:"Perfect Blue",cat:"cyber",director:"Satoshi Kon"},
-{title:"Paprika",cat:"cyber",director:"Satoshi Kon"},
-{title:"Stalker",cat:"arthouse",director:"Andrei Tarkovsky"},
-{title:"Solaris",cat:"arthouse",director:"Andrei Tarkovsky"},
-{title:"The Revenant",cat:"arthouse",director:"Alejandro G. Iñárritu"},
-{title:"No Country for Old Men",cat:"neo",director:"Coen Brothers"},
-{title:"There Will Be Blood",cat:"arthouse",director:"Paul Thomas Anderson"},
-{title:"The Fountain",cat:"arthouse",director:"Darren Aronofsky"},
-{title:"Black Swan",cat:"arthouse",director:"Darren Aronofsky"},
-{title:"Requiem for a Dream",cat:"arthouse",director:"Darren Aronofsky"},
-{title:"The Batman",cat:"neo",director:"Matt Reeves"},
-{title:"Sin City",cat:"neo",director:"Robert Rodriguez"},
-{title:"Heat",cat:"neo",director:"Michael Mann"},
-{title:"Collateral",cat:"neo",director:"Michael Mann"},
-{title:"Dredd",cat:"cyber",director:"Pete Travis"},
-{title:"Ex Machina",cat:"cyber",director:"Alex Garland"},
-{title:"Under the Skin",cat:"arthouse",director:"Jonathan Glazer"},
-{title:"Coherence",cat:"neo",director:"James Ward Byrkit"},
-{title:"Triangle",cat:"neo",director:"Christopher Smith"},
-{title:"Timecrimes",cat:"neo",director:"Nacho Vigalondo"},
-{title:"The Mist",cat:"apocalypse",director:"Frank Darabont"},
-{title:"The Wailing",cat:"arthouse",director:"Na Hong-jin"},
-{title:"The Babadook",cat:"arthouse",director:"Jennifer Kent"},
-{title:"The Platform",cat:"apocalypse",director:"Galder Gaztelu-Urrutia"},
-{title:"Beyond the Black Rainbow",cat:"cyber",director:"Panos Cosmatos"},
-{title:"The Raid",cat:"violence",director:"Gareth Evans"},
-{title:"The Raid 2",cat:"violence",director:"Gareth Evans"},
-
-// añadimos hasta superar 100
-{title:"Gozu",cat:"arthouse",director:"Takashi Miike"},
-{title:"Angel's Egg",cat:"arthouse",director:"Mamoru Oshii"},
-{title:"Tetsuo: The Iron Man",cat:"cyber",director:"Shinya Tsukamoto"},
-{title:"High Life",cat:"arthouse",director:"Claire Denis"},
-{title:"The Endless",cat:"arthouse",director:"Justin Benson"},
-{title:"The Void",cat:"arthouse",director:"Jeremy Gillespie"},
-{title:"The Guest",cat:"neo",director:"Adam Wingard"},
-{title:"The Menu",cat:"neo",director:"Mark Mylod"},
-{title:"Possession",cat:"arthouse",director:"Andrzej Zulawski"},
-{title:"Hardcore Henry",cat:"violence",director:"Ilya Naishuller"}
-];
-
-function populateDirectors(){
-    const select=document.getElementById("filterDirector");
-    const directors=[...new Set(movies.map(m=>m.director))];
-    directors.forEach(d=>{
-        const opt=document.createElement("option");
-        opt.value=d;
-        opt.textContent=d;
-        select.appendChild(opt);
-    });
-}
-
-function renderMovies(){
-    const list=document.getElementById("movieList");
-    list.innerHTML="";
-    const cat=document.getElementById("filterCat").value;
-    const dir=document.getElementById("filterDirector").value;
-
-    movies.forEach(movie=>{
-        if((cat==="all"||movie.cat===cat) &&
-           (dir==="all"||movie.director===dir)){
-
-            const checked=localStorage.getItem("movie_"+movie.title)==="true";
-            const rating=localStorage.getItem("rate_"+movie.title)||0;
-
-            const div=document.createElement("div");
-            div.className="movie";
-            div.innerHTML=`
-                <div>
-                <input type="checkbox" ${checked?"checked":""}
-                onchange="saveCheck('${movie.title}',this.checked)">
-                ${movie.title} — <small>${movie.director}</small>
-                </div>
-                <div class="stars">
-                ${renderStars(movie.title,rating)}
-                </div>
-            `;
-            list.appendChild(div);
-        }
-    });
-
-    updateProgress();
-    updateStats();
-    updateProfile();
-}
-
-function renderStars(title,rating){
-    let stars="";
-    for(let i=1;i<=5;i++){
-        stars+=`<span onclick="rate('${title}',${i})">${i<=rating?"★":"☆"}</span>`;
-    }
-    return stars;
-}
-
-function rate(title,value){
-    localStorage.setItem("rate_"+title,value);
-    renderMovies();
-}
-
-function saveCheck(title,state){
-    localStorage.setItem("movie_"+title,state);
-    renderMovies();
-}
-
-function updateProgress(){
-    let total=movies.length;
-    let checked=0;
-    movies.forEach(m=>{
-        if(localStorage.getItem("movie_"+m.title)==="true") checked++;
-    });
-    document.getElementById("progress").style.width=(checked/total*100)+"%";
-}
-
-function updateStats(){
-    let stats={};
-    movies.forEach(m=>{
-        if(localStorage.getItem("movie_"+m.title)==="true"){
-            stats[m.cat]=(stats[m.cat]||0)+1;
-        }
-    });
-    document.getElementById("stats").textContent=JSON.stringify(stats,null,2);
-}
-
-function updateProfile(){
-    let total=0,count=0;
-    movies.forEach(m=>{
-        let r=parseInt(localStorage.getItem("rate_"+m.title)||0);
-        if(r>0){total+=r;count++;}
-    });
-    let avg=count?total/count:0;
-
-    let text="Perfil sin datos.";
-    if(avg>=4.2) text="Buscas intensidad estética extrema y catarsis emocional.";
-    else if(avg>=3.5) text="Equilibras oscuridad con narrativa potente.";
-    else if(avg>0) text="Crítico exigente, difícil de impresionar.";
-
-    document.getElementById("profile").innerText=text;
-}
-
-function aiRecommend(){
-    const unseen=movies.filter(m=>localStorage.getItem("movie_"+m.title)!=="true");
-    if(unseen.length===0){
-        document.getElementById("destinyResult").innerText="Has visto todo. Fin del juego.";
-        return;
+            // +100 CURADAS
+            {title:"Mulholland Drive",cat:"neo",director:"David Lynch"},
+            {title:"Lost Highway",cat:"neo",director:"David Lynch"},
+            {title:"Eraserhead",cat:"arthouse",director:"David Lynch"},
+            {title:"Blue Velvet",cat:"neo",director:"David Lynch"},
+            {title:"Enemy",cat:"neo",director:"Denis Villeneuve"},
+            {title:"Prisoners",cat:"neo",director:"Denis Villeneuve"},
+            {title:"Nightcrawler",cat:"neo",director:"Dan Gilroy"},
+            {title:"Se7en",cat:"neo",director:"David Fincher"},
+            {title:"Zodiac",cat:"neo",director:"David Fincher"},
+            {title:"The Game",cat:"neo",director:"David Fincher"},
+            {title:"Fight Club",cat:"neo",director:"David Fincher"},
+            {title:"The Lighthouse",cat:"arthouse",director:"Robert Eggers"},
+            {title:"The Witch",cat:"arthouse",director:"Robert Eggers"},
+            {title:"The Northman",cat:"arthouse",director:"Robert Eggers"},
+            {title:"Mandy",cat:"arthouse",director:"Panos Cosmatos"},
+            {title:"Climax",cat:"arthouse",director:"Gaspar Noé"},
+            {title:"Enter the Void",cat:"arthouse",director:"Gaspar Noé"},
+            {title:"The Neon Demon",cat:"arthouse",director:"Nicolas Winding Refn"},
+            {title:"Only God Forgives",cat:"violence",director:"Nicolas Winding Refn"},
+            {title:"Children of Men",cat:"apocalypse",director:"Alfonso Cuarón"},
+            {title:"Annihilation",cat:"apocalypse",director:"Alex Garland"},
+            {title:"The Road",cat:"apocalypse",director:"John Hillcoat"},
+            {title:"Melancholia",cat:"arthouse",director:"Lars von Trier"},
+            {title:"The House That Jack Built",cat:"violence",director:"Lars von Trier"},
+            {title:"Possessor",cat:"cyber",director:"Brandon Cronenberg"},
+            {title:"Infinity Pool",cat:"arthouse",director:"Brandon Cronenberg"},
+            {title:"Upgrade",cat:"cyber",director:"Leigh Whannell"},
+            {title:"Dark City",cat:"cyber",director:"Alex Proyas"},
+            {title:"The Matrix",cat:"cyber",director:"Wachowski Sisters"},
+            {title:"Brazil",cat:"cyber",director:"Terry Gilliam"},
+            {title:"Snowpiercer",cat:"apocalypse",director:"Bong Joon-ho"},
+            {title:"Mad Max: Fury Road",cat:"apocalypse",director:"George Miller"},
+            {title:"I Saw the Devil",cat:"violence",director:"Kim Jee-woon"},
+            {title:"The Handmaiden",cat:"arthouse",director:"Park Chan-wook"},
+            {title:"Audition",cat:"violence",director:"Takashi Miike"},
+            {title:"Perfect Blue",cat:"cyber",director:"Satoshi Kon"},
+            {title:"Paprika",cat:"cyber",director:"Satoshi Kon"},
+            {title:"Stalker",cat:"arthouse",director:"Andrei Tarkovsky"},
+            {title:"Solaris",cat:"arthouse",director:"Andrei Tarkovsky"},
+            {title:"The Revenant",cat:"arthouse",director:"Alejandro G. Iñárritu"},
+            {title:"No Country for Old Men",cat:"neo",director:"Coen Brothers"},
+            {title:"There Will Be Blood",cat:"arthouse",director:"Paul Thomas Anderson"},
+            {title:"The Fountain",cat:"arthouse",director:"Darren Aronofsky"},
+            {title:"Black Swan",cat:"arthouse",director:"Darren Aronofsky"},
+            {title:"Requiem for a Dream",cat:"arthouse",director:"Darren Aronofsky"},
+            {title:"The Batman",cat:"neo",director:"Matt Reeves"},
+            {title:"Sin City",cat:"neo",director:"Robert Rodriguez"},
+            {title:"Heat",cat:"neo",director:"Michael Mann"},
+            {title:"Collateral",cat:"neo",director:"Michael Mann"},
+            {title:"Dredd",cat:"cyber",director:"Pete Travis"},
+            {title:"Ex Machina",cat:"cyber",director:"Alex Garland"},
+            {title:"Under the Skin",cat:"arthouse",director:"Jonathan Glazer"},
+            {title:"Coherence",cat:"neo",director:"James Ward Byrkit"},
+            {title:"Triangle",cat:"neo",director:"Christopher Smith"},
+            {title:"Timecrimes",cat:"neo",director:"Nacho Vigalondo"},
+            {title:"The Mist",cat:"apocalypse",director:"Frank Darabont"},
+            {title:"The Wailing",cat:"arthouse",director:"Na Hong-jin"},
+            {title:"The Babadook",cat:"arthouse",director:"Jennifer Kent"},
+            {title:"The Platform",cat:"apocalypse",director:"Galder Gaztelu-Urrutia"},
+            {title:"Beyond the Black Rainbow",cat:"cyber",director:"Panos Cosmatos"},
+            {title:"The Raid",cat:"violence",director:"Gareth Evans"},
+            {title:"The Raid 2",cat:"violence",director:"Gareth Evans"},
+            {title:"Gozu",cat:"arthouse",director:"Takashi Miike"},
+            {title:"Angel's Egg",cat:"arthouse",director:"Mamoru Oshii"},
+            {title:"Tetsuo: The Iron Man",cat:"cyber",director:"Shinya Tsukamoto"},
+            {title:"High Life",cat:"arthouse",director:"Claire Denis"},
+            {title:"The Endless",cat:"arthouse",director:"Justin Benson"},
+            {title:"The Void",cat:"arthouse",director:"Jeremy Gillespie"},
+            {title:"The Guest",cat:"neo",director:"Adam Wingard"},
+            {title:"The Menu",cat:"neo",director:"Mark Mylod"},
+            {title:"Possession",cat:"arthouse",director:"Andrzej Zulawski"},
+            {title:"Hardcore Henry",cat:"violence",director:"Ilya Naishuller"}
+        ];
+        this.directorCache = null;
+        this.init();
     }
 
-    let genreScore={},directorScore={};
-
-    movies.forEach(m=>{
-        let r=parseInt(localStorage.getItem("rate_"+m.title)||0);
-        if(r>0){
-            genreScore[m.cat]=(genreScore[m.cat]||0)+r;
-            directorScore[m.director]=(directorScore[m.director]||0)+r*1.5;
-        }
-    });
-
-    let scored=unseen.map(m=>{
-        let score=1;
-        if(genreScore[m.cat]) score+=genreScore[m.cat];
-        if(directorScore[m.director]) score+=directorScore[m.director];
-        if(insomnia && ["neo","arthouse","apocalypse"].includes(m.cat)) score+=5;
-        return {movie:m,score:score};
-    });
-
-    scored.sort((a,b)=>b.score-a.score);
-
-    document.getElementById("destinyResult").innerText=
-        "IA recomienda: "+scored[0].movie.title;
-}
-
-function doubleSession(){
-    const unseen=movies.filter(m=>localStorage.getItem("movie_"+m.title)!=="true");
-    if(unseen.length<2){
-        document.getElementById("destinyResult").innerText="No hay suficiente caos.";
-        return;
+    init() {
+        this.populateDirectors();
+        this.renderMovies();
+        this.validateLocalStorage();
     }
-    const shuffled=unseen.sort(()=>0.5-Math.random());
-    document.getElementById("destinyResult").innerText=
-        "Doble sesión: "+shuffled[0].title+" + "+shuffled[1].title;
+
+    validateLocalStorage() {
+        try {
+            localStorage.setItem("test", "test");
+            localStorage.removeItem("test");
+        } catch (e) {
+            this.showInfo("⚠️ localStorage no disponible. Los datos no se guardarán.");
+        }
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    populateDirectors() {
+        if (this.directorCache) return;
+        const select = document.getElementById("filterDirector");
+        const directors = [...new Set(this.movies.map(m => m.director))].sort();
+        this.directorCache = directors;
+        directors.forEach(d => {
+            const opt = document.createElement("option");
+            opt.value = d;
+            opt.textContent = d;
+            select.appendChild(opt);
+        });
+    }
+
+    renderMovies(filteredMovies = null) {
+        const list = document.getElementById("movieList");
+        list.innerHTML = "";
+        
+        const cat = document.getElementById("filterCat").value;
+        const dir = document.getElementById("filterDirector").value;
+        const toRender = filteredMovies || this.movies;
+
+        toRender.forEach(movie => {
+            if ((cat === "all" || movie.cat === cat) &&
+                (dir === "all" || movie.director === dir)) {
+
+                const checked = this.getCheckState(movie.title);
+                const rating = this.getRating(movie.title);
+
+                const div = document.createElement("div");
+                div.className = "movie";
+                
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = checked;
+                checkbox.addEventListener("change", () => this.saveCheck(movie.title, checkbox.checked));
+
+                const titleSpan = document.createElement("span");
+                titleSpan.textContent = `${movie.title} — ${movie.director}`;
+                titleSpan.style.fontSize = "small";
+
+                const starsDiv = document.createElement("div");
+                starsDiv.className = "stars";
+                starsDiv.appendChild(this.createStars(movie.title, rating));
+
+                const leftDiv = document.createElement("div");
+                leftDiv.appendChild(checkbox);
+                leftDiv.appendChild(titleSpan);
+
+                div.appendChild(leftDiv);
+                div.appendChild(starsDiv);
+                list.appendChild(div);
+            }
+        });
+
+        this.updateProgress();
+        this.updateStats();
+        this.updateTopDirectors();
+        this.updateProfile();
+    }
+
+    createStars(title, rating) {
+        const container = document.createElement("span");
+        for (let i = 1; i <= 5; i++) {
+            const star = document.createElement("span");
+            star.textContent = i <= rating ? "★" : "☆";
+            star.style.cursor = "pointer";
+            star.addEventListener("click", () => this.rate(title, i));
+            container.appendChild(star);
+        }
+        return container;
+    }
+
+    rate(title, value) {
+        this.setRating(title, value);
+        this.renderMovies();
+    }
+
+    saveCheck(title, state) {
+        this.setCheckState(title, state);
+        this.renderMovies();
+    }
+
+    getCheckState(title) {
+        return localStorage.getItem("movie_" + this.escapeHtml(title)) === "true";
+    }
+
+    setCheckState(title, state) {
+        localStorage.setItem("movie_" + this.escapeHtml(title), state);
+    }
+
+    getRating(title) {
+        return parseInt(localStorage.getItem("rate_" + this.escapeHtml(title)) || "0");
+    }
+
+    setRating(title, value) {
+        localStorage.setItem("rate_" + this.escapeHtml(title), value);
+    }
+
+    updateProgress() {
+        const total = this.movies.length;
+        let checked = 0;
+        this.movies.forEach(m => {
+            if (this.getCheckState(m.title)) checked++;
+        });
+        document.getElementById("progress").style.width = (checked / total * 100) + "%";
+    }
+
+    updateStats() {
+        let stats = {};
+        this.movies.forEach(m => {
+            if (this.getCheckState(m.title)) {
+                stats[m.cat] = (stats[m.cat] || 0) + 1;
+            }
+        });
+        document.getElementById("stats").textContent = JSON.stringify(stats, null, 2);
+    }
+
+    updateTopDirectors() {
+        let directorStats = {};
+        this.movies.forEach(m => {
+            if (this.getCheckState(m.title)) {
+                directorStats[m.director] = (directorStats[m.director] || 0) + 1;
+            }
+        });
+        
+        const sorted = Object.entries(directorStats)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
+        
+        const formatted = sorted.length > 0 
+            ? sorted.map(([dir, count]) => `${dir}: ${count}`).join("\n")
+            : "Sin datos";
+        
+        document.getElementById("topDirectors").textContent = formatted;
+    }
+
+    updateProfile() {
+        let total = 0, count = 0;
+        this.movies.forEach(m => {
+            const r = this.getRating(m.title);
+            if (r > 0) { total += r; count++; }
+        });
+        
+        let avg = count ? total / count : 0;
+        let text = "Perfil sin datos.";
+        
+        if (avg >= 4.2) text = "Buscas intensidad estética extrema y catarsis emocional.";
+        else if (avg >= 3.5) text = "Equilibras oscuridad con narrativa potente.";
+        else if (avg > 0) text = "Crítico exigente, difícil de impresionar.";
+
+        document.getElementById("profile").textContent = text;
+    }
+
+    fisherYatesShuffle(array) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    aiRecommend() {
+        const unseen = this.movies.filter(m => !this.getCheckState(m.title));
+        if (unseen.length === 0) {
+            document.getElementById("destinyResult").textContent = "Has visto todo. Fin del juego.";
+            return;
+        }
+
+        let genreScore = {}, directorScore = {};
+
+        this.movies.forEach(m => {
+            const r = this.getRating(m.title);
+            if (r > 0) {
+                genreScore[m.cat] = (genreScore[m.cat] || 0) + r;
+                directorScore[m.director] = (directorScore[m.director] || 0) + r * 1.5;
+            }
+        });
+
+        const scored = unseen.map(m => {
+            let score = 1;
+            if (genreScore[m.cat]) score += genreScore[m.cat];
+            if (directorScore[m.director]) score += directorScore[m.director];
+            if (this.insomnia && ["neo", "arthouse", "apocalypse"].includes(m.cat)) score += 5;
+            return { movie: m, score: score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+
+        document.getElementById("destinyResult").textContent = "IA recomienda: " + scored[0].movie.title;
+    }
+
+    doubleSession() {
+        const unseen = this.movies.filter(m => !this.getCheckState(m.title));
+        if (unseen.length < 2) {
+            document.getElementById("destinyResult").textContent = "No hay suficiente caos.";
+            return;
+        }
+        
+        const shuffled = this.fisherYatesShuffle(unseen);
+        document.getElementById("destinyResult").textContent = 
+            "Doble sesión: " + shuffled[0].title + " + " + shuffled[1].title;
+    }
+
+    insomniaMode() {
+        this.insomnia = !this.insomnia;
+        document.body.style.background = this.insomnia ? "#050510" : "black";
+        this.showInfo(this.insomnia ? "🌙 Modo Insomne ACTIVADO" : "✨ Modo Insomne desactivado");
+    }
+
+    searchMovies(query) {
+        const q = query.toLowerCase().trim();
+        if (q === "") {
+            this.renderMovies();
+            return;
+        }
+        
+        const filtered = this.movies.filter(m => 
+            m.title.toLowerCase().includes(q) || 
+            m.director.toLowerCase().includes(q)
+        );
+        
+        this.renderMovies(filtered);
+    }
+
+    exportData() {
+        const data = {};
+        this.movies.forEach(m => {
+            const checked = this.getCheckState(m.title);
+            const rating = this.getRating(m.title);
+            if (checked || rating > 0) {
+                data[m.title] = { checked, rating };
+            }
+        });
+        
+        const json = JSON.stringify(data, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "videclub-backup.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showInfo("✅ Datos exportados: videclub-backup.json");
+    }
+
+    importData() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        input.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    Object.entries(data).forEach(([title, state]) => {
+                        if (state.checked) this.setCheckState(title, true);
+                        if (state.rating > 0) this.setRating(title, state.rating);
+                    });
+                    this.renderMovies();
+                    this.showInfo("✅ Datos importados correctamente");
+                } catch (err) {
+                    this.showInfo("❌ Error al importar. Formato JSON inválido.");
+                }
+            };
+            reader.readAsText(file);
+        });
+        input.click();
+    }
+
+    showInfo(message) {
+        const infoDiv = document.getElementById("infoMessage");
+        infoDiv.textContent = message;
+        infoDiv.style.display = "block";
+        setTimeout(() => {
+            infoDiv.style.display = "none";
+        }, 3000);
+    }
 }
 
-function insomniaMode(){
-    insomnia=!insomnia;
-    document.body.style.background=insomnia?"#050510":"black";
-}
-
-populateDirectors();
-renderMovies();
+const movieDB = new MovieDB();
 
 </script>
 
