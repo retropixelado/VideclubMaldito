@@ -45,7 +45,7 @@ h1{
     padding:20px;
 }
 
-button, select{
+button, select, input{
     background:black;
     color:#00ff9f;
     border:1px solid #00ff9f;
@@ -68,9 +68,7 @@ button:hover{
     font-size:14px;
 }
 
-.stars span{
-    cursor:pointer;
-}
+.stars span{ cursor:pointer; }
 
 .progress-bar{
     height:20px;
@@ -108,6 +106,7 @@ button:hover{
 <button onclick="aiRecommend()">🧠 IA Recomienda</button>
 <button onclick="doubleSession()">💀 Doble Sesión</button>
 <button onclick="insomniaMode()">🌙 Insomne</button>
+<button onclick="toggleCynic()">😏 Modo Cínico</button>
 
 <div id="destinyResult"></div>
 
@@ -140,15 +139,25 @@ button:hover{
 <div id="profile"></div>
 </div>
 
+<div class="panel">
+<h3>💬 Oráculo del Videoclub</h3>
+<div id="chatHistory" style="max-height:150px; overflow:auto; margin-bottom:10px;"></div>
+<input type="text" id="chatInput" placeholder="Habla con la cinta..." style="width:70%;">
+<button onclick="miniChat()">Invocar</button>
+</div>
+
 </div>
 
 <script>
 
 let insomnia=false;
+let cynic=false;
+
+let chatMemory = JSON.parse(localStorage.getItem("chatMemory")||"[]");
+let learning   = JSON.parse(localStorage.getItem("learning")||"{}");
 
 const movies=[
 
-// TUS OBSESIONES
 {title:"Oldboy",cat:"violence",director:"Park Chan-wook"},
 {title:"Drive",cat:"neo",director:"Nicolas Winding Refn"},
 {title:"Under the Silver Lake",cat:"neo",director:"David Robert Mitchell"},
@@ -160,19 +169,14 @@ const movies=[
 {title:"Princess Mononoke",cat:"arthouse",director:"Hayao Miyazaki"},
 {title:"28 Days Later",cat:"apocalypse",director:"Danny Boyle"},
 {title:"Train to Busan",cat:"apocalypse",director:"Yeon Sang-ho"},
-
-// +100 CURADAS
 {title:"Mulholland Drive",cat:"neo",director:"David Lynch"},
 {title:"Lost Highway",cat:"neo",director:"David Lynch"},
 {title:"Eraserhead",cat:"arthouse",director:"David Lynch"},
 {title:"Blue Velvet",cat:"neo",director:"David Lynch"},
-{title:"Enemy",cat:"neo",director:"Denis Villeneuve"},
-{title:"Prisoners",cat:"neo",director:"Denis Villeneuve"},
-{title:"Nightcrawler",cat:"neo",director:"Dan Gilroy"},
 {title:"Se7en",cat:"neo",director:"David Fincher"},
 {title:"Zodiac",cat:"neo",director:"David Fincher"},
-{title:"The Game",cat:"neo",director:"David Fincher"},
 {title:"Fight Club",cat:"neo",director:"David Fincher"},
+{title:"The Game",cat:"neo",director:"David Fincher"},
 {title:"The Lighthouse",cat:"arthouse",director:"Robert Eggers"},
 {title:"The Witch",cat:"arthouse",director:"Robert Eggers"},
 {title:"The Northman",cat:"arthouse",director:"Robert Eggers"},
@@ -185,7 +189,6 @@ const movies=[
 {title:"Annihilation",cat:"apocalypse",director:"Alex Garland"},
 {title:"The Road",cat:"apocalypse",director:"John Hillcoat"},
 {title:"Melancholia",cat:"arthouse",director:"Lars von Trier"},
-{title:"The House That Jack Built",cat:"violence",director:"Lars von Trier"},
 {title:"Possessor",cat:"cyber",director:"Brandon Cronenberg"},
 {title:"Infinity Pool",cat:"arthouse",director:"Brandon Cronenberg"},
 {title:"Upgrade",cat:"cyber",director:"Leigh Whannell"},
@@ -224,8 +227,6 @@ const movies=[
 {title:"Beyond the Black Rainbow",cat:"cyber",director:"Panos Cosmatos"},
 {title:"The Raid",cat:"violence",director:"Gareth Evans"},
 {title:"The Raid 2",cat:"violence",director:"Gareth Evans"},
-
-// añadimos hasta superar 100
 {title:"Gozu",cat:"arthouse",director:"Takashi Miike"},
 {title:"Angel's Egg",cat:"arthouse",director:"Mamoru Oshii"},
 {title:"Tetsuo: The Iron Man",cat:"cyber",director:"Shinya Tsukamoto"},
@@ -329,7 +330,7 @@ function updateProfile(){
     let avg=count?total/count:0;
 
     let text="Perfil sin datos.";
-    if(avg>=4.2) text="Buscas intensidad estética extrema y catarsis emocional.";
+    if(avg>=4.2) text="Buscas intensidad estética extrema y catarsis.";
     else if(avg>=3.5) text="Equilibras oscuridad con narrativa potente.";
     else if(avg>0) text="Crítico exigente, difícil de impresionar.";
 
@@ -339,38 +340,35 @@ function updateProfile(){
 function aiRecommend(){
     const unseen=movies.filter(m=>localStorage.getItem("movie_"+m.title)!=="true");
     if(unseen.length===0){
-        document.getElementById("destinyResult").innerText="Has visto todo. Fin del juego.";
+        document.getElementById("destinyResult").innerText="Has visto todo. Fin.";
         return;
     }
 
-    let genreScore={},directorScore={};
-
-    movies.forEach(m=>{
-        let r=parseInt(localStorage.getItem("rate_"+m.title)||0);
-        if(r>0){
-            genreScore[m.cat]=(genreScore[m.cat]||0)+r;
-            directorScore[m.director]=(directorScore[m.director]||0)+r*1.5;
-        }
-    });
-
     let scored=unseen.map(m=>{
         let score=1;
-        if(genreScore[m.cat]) score+=genreScore[m.cat];
-        if(directorScore[m.director]) score+=directorScore[m.director];
+        let r=parseInt(localStorage.getItem("rate_"+m.title)||0);
+        if(r>0) score+=r;
+        if(learning[m.cat]) score+=learning[m.cat];
         if(insomnia && ["neo","arthouse","apocalypse"].includes(m.cat)) score+=5;
-        return {movie:m,score:score};
+        return {movie:m,score};
     });
 
     scored.sort((a,b)=>b.score-a.score);
+    let pick=scored[0].movie;
+
+    learning[pick.cat]=(learning[pick.cat]||0)+1;
+    localStorage.setItem("learning",JSON.stringify(learning));
 
     document.getElementById("destinyResult").innerText=
-        "IA recomienda: "+scored[0].movie.title;
+        "IA recomienda: "+pick.title;
+
+    updateProfile();
 }
 
 function doubleSession(){
     const unseen=movies.filter(m=>localStorage.getItem("movie_"+m.title)!=="true");
     if(unseen.length<2){
-        document.getElementById("destinyResult").innerText="No hay suficiente caos.";
+        document.getElementById("destinyResult").innerText="No hay suficiente material.";
         return;
     }
     const shuffled=unseen.sort(()=>0.5-Math.random());
@@ -383,8 +381,53 @@ function insomniaMode(){
     document.body.style.background=insomnia?"#050510":"black";
 }
 
+function toggleCynic(){
+    cynic=!cynic;
+    alert("Modo cínico "+(cynic?"activado":"desactivado"));
+}
+
+/* MINI CHAT */
+
+function miniChat(){
+    const input=document.getElementById("chatInput").value.toLowerCase();
+    const history=document.getElementById("chatHistory");
+
+    if(!input) return;
+
+    chatMemory.push({role:"user",text:input});
+    localStorage.setItem("chatMemory",JSON.stringify(chatMemory));
+
+    if(input.includes("terror")) learning["apocalypse"]=(learning["apocalypse"]||0)+1;
+    if(input.includes("cyber")) learning["cyber"]=(learning["cyber"]||0)+1;
+    if(input.includes("lento")) learning["arthouse"]=(learning["arthouse"]||0)+1;
+    localStorage.setItem("learning",JSON.stringify(learning));
+
+    let bestCat = Object.keys(learning).sort((a,b)=>learning[b]-learning[a])[0];
+    let candidates = bestCat ? movies.filter(m=>m.cat===bestCat) : movies;
+
+    let pick=candidates[Math.floor(Math.random()*candidates.length)];
+
+    let response = cynic
+        ? `Claro... seguro que hoy también necesitas ${pick.title}.`
+        : `Quizá te venga bien: ${pick.title}`;
+
+    chatMemory.push({role:"ai",text:response});
+    localStorage.setItem("chatMemory",JSON.stringify(chatMemory));
+
+    renderChat();
+}
+
+function renderChat(){
+    const history=document.getElementById("chatHistory");
+    history.innerHTML="";
+    chatMemory.slice(-10).forEach(msg=>{
+        history.innerHTML+="<div>"+(msg.role==="user"?"🧍 ":"📼 ")+msg.text+"</div>";
+    });
+}
+
 populateDirectors();
 renderMovies();
+renderChat();
 
 </script>
 
